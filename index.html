@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Rekap Gaji & Presensi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+  <!-- ================= LAYAR LOGIN ================= -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-sm w-full p-6 space-y-5">
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center mx-auto text-2xl font-bold">
+          💼
+        </div>
+        <h2 class="text-xl font-bold text-slate-900 pt-2">Portal Rekap Gaji</h2>
+        <p class="text-xs text-slate-500">Silakan login dengan Akun Anda</p>
+      </div>
+
+      <form id="formLogin" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Username</label>
+          <input type="text" id="inputUsername" placeholder="Username" required class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Password</label>
+          <div class="relative">
+            <input type="password" id="inputPass" placeholder="Password" required class="w-full text-sm border border-slate-300 rounded-lg pl-3 pr-10 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <button type="button" onclick="togglePassVisibility('inputPass', this)" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none">
+              👁️
+            </button>
+          </div>
+          <p id="loginError" class="text-xs text-red-500 mt-1.5 hidden">Akun atau Password tidak cocok!</p>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-2.5 rounded-lg transition duration-150 shadow">
+          Login
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= POPUP NOTIFIKASI KUSTOM ================= -->
+  <div id="popupCustomAlert" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center space-y-4 border border-slate-100">
+      <div id="customAlertIcon" class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+        ℹ️
+      </div>
+      <div>
+        <h3 id="customAlertTitle" class="text-lg font-bold text-slate-900">Pemberitahuan</h3>
+        <p id="customAlertMsg" class="text-xs text-slate-600 mt-1"></p>
+      </div>
+      <button onclick="closeCustomAlert()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 rounded-lg transition shadow">
+        Tutup
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= POPUP KONFIRMASI KUSTOM ================= -->
+  <div id="popupCustomConfirm" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center space-y-4 border border-slate-100">
+      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+        ⚠️
+      </div>
+      <div>
+        <h3 id="customConfirmTitle" class="text-base font-bold text-slate-900">Konfirmasi Hapus</h3>
+        <p id="customConfirmMsg" class="text-xs text-slate-600 mt-1"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="resolveCustomConfirm(false)" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg transition">
+          Batal
+        </button>
+        <button onclick="resolveCustomConfirm(true)" class="w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold py-2.5 rounded-lg transition shadow">
+          Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= POPUP EDIT AKUN KUSTOM ================= -->
+  <div id="popupEditAccount" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+        <h3 class="text-sm font-bold text-slate-900">✏️ Ubah Data Akun</h3>
+        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <form id="formEditAcc" onsubmit="submitEditAccount(event)" class="space-y-3">
+        <input type="hidden" id="editAccIndex">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Username</label>
+          <input type="text" id="editAccName" required class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Role / Peran</label>
+          <select id="editAccRole" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white focus:ring-2 focus:ring-indigo-500">
+            <option value="user">User Biasa</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Password</label>
+          <div class="relative">
+            <input type="password" id="editAccPass" required class="w-full text-xs border border-slate-300 rounded-lg p-2 pr-7 focus:ring-2 focus:ring-indigo-500">
+            <button type="button" onclick="togglePassVisibility('editAccPass', this)" class="absolute right-2 top-2 text-slate-400 text-xs">
+              👁️
+            </button>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeEditModal()" class="px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800">
+            Batal
+          </button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow">
+            Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL KELOLA ADMIN & AKUN LOGIN ================= -->
+  <div id="adminModal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-indigo-50">
+        <h3 class="font-bold text-indigo-900 text-base flex items-center gap-2">
+          ⚙️ Kelola Fitur & Akun Pengguna
+        </h3>
+        <button onclick="toggleAdminModal(false)" class="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none">&times;</button>
+      </div>
+      
+      <div class="p-5 space-y-5 max-h-[75vh] overflow-y-auto text-sm">
+        
+        <!-- Manajemen Akun Login Tambahan dengan Pilihan Role -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <div class="flex justify-between items-center">
+            <h4 class="font-semibold text-xs text-slate-700 uppercase tracking-wider">Daftar Akun & Role</h4>
+            <span class="text-[11px] text-indigo-600 font-medium" id="totalUserCount">2 Akun</span>
+          </div>
+
+          <!-- Form Tambah User -->
+          <div class="grid grid-cols-7 gap-2 pt-1">
+            <input type="text" id="newUsername" placeholder="Username" class="col-span-2 text-xs border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500">
+            <select id="newUserRole" class="col-span-2 text-xs border border-slate-300 rounded-lg p-2 bg-white focus:ring-2 focus:ring-indigo-500">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+            <div class="col-span-2 relative">
+              <input type="password" id="newUserPass" placeholder="Password" class="w-full text-xs border border-slate-300 rounded-lg p-2 pr-6 focus:ring-2 focus:ring-indigo-500">
+              <button type="button" onclick="togglePassVisibility('newUserPass', this)" class="absolute right-2 top-2 text-slate-400 text-xs">
+                👁️
+              </button>
+            </div>
+            <button onclick="addUserAccount()" class="col-span-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition">
+              + Add
+            </button>
+          </div>
+
+          <!-- Tabel List User -->
+          <div class="border border-slate-200 rounded-lg overflow-hidden max-h-44 overflow-y-auto bg-white">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                <tr>
+                  <th class="p-2">Username</th>
+                  <th class="p-2">Role</th>
+                  <th class="p-2">Password</th>
+                  <th class="p-2 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="userTableBody" class="divide-y divide-slate-100">
+                <!-- Diisi dinamis -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Kelola Berbagai Fitur (Feature Flags) -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+          <h4 class="font-semibold text-xs text-slate-700 uppercase tracking-wider">Kelola Fitur Dashboard</h4>
+          
+          <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
+            <span class="text-xs text-slate-700 font-medium">Tampilkan Form Tambah Log Presensi</span>
+            <input type="checkbox" id="cfgToggleForm" class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+          </label>
+
+          <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
+            <span class="text-xs text-slate-700 font-medium">Tampilkan Kartu Ringkasan Gaji (KPI)</span>
+            <input type="checkbox" id="cfgToggleKpi" class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+          </label>
+
+          <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
+            <span class="text-xs text-slate-700 font-medium">Aktifkan Tombol Unduh CSV</span>
+            <input type="checkbox" id="cfgToggleExport" class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+          </label>
+
+          <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 cursor-pointer">
+            <span class="text-xs text-slate-700 font-medium">Izinkan Role User Biasa Mengunduh CSV</span>
+            <input type="checkbox" id="cfgToggleUserExport" class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+          </label>
+        </div>
+
+        <!-- Pengaturan Default Tarif -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <h4 class="font-semibold text-xs text-slate-700 uppercase tracking-wider">Tarif Default Gaji</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-1">Gaji Harian (Rp)</label>
+              <input type="number" id="cfgGajiHarian" class="w-full text-xs border border-slate-300 rounded-lg p-2">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-1">Uang Makan (Rp)</label>
+              <input type="number" id="cfgUangMakan" class="w-full text-xs border border-slate-300 rounded-lg p-2">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-1">Gaji Pokok (Rp)</label>
+              <input type="number" id="cfgGajiPokok" class="w-full text-xs border border-slate-300 rounded-lg p-2">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-1">Potongan Admin (Rp)</label>
+              <input type="number" id="cfgAdminFee" class="w-full text-xs border border-slate-300 rounded-lg p-2">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 bg-slate-100 flex justify-end border-t border-slate-200">
+        <button onclick="saveAdminSettings()" class="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow">
+          Simpan Semua Pengaturan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= KONTEN DASHBOARD ================= -->
+  <div id="dashboardApp" class="hidden min-h-screen pb-12">
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+      <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl font-bold tracking-tight">💼 Rekap Gaji & Presensi</span>
+          <span id="activeUserBadge" class="text-xs px-2 py-0.5 rounded font-medium"></span>
+        </div>
+        <div class="flex items-center space-x-3">
+          <div class="flex items-center space-x-2">
+            <label for="monthSelect" class="text-xs text-indigo-200">Bulan:</label>
+            <select id="monthSelect" onchange="loadMonthData()" class="bg-indigo-800 text-white text-sm font-medium rounded-lg px-3 py-1.5 border border-indigo-500 focus:outline-none focus:ring-2 focus:ring-white">
+              <option>Memuat...</option>
+            </select>
+          </div>
+          <button id="btnAdminManage" onclick="toggleAdminModal(true)" class="bg-indigo-800/90 hover:bg-indigo-900 text-xs px-3 py-1.5 rounded-lg text-indigo-100 hover:text-white transition flex items-center gap-1 hidden">
+            ⚙️ Kelola Fitur
+          </button>
+          <button onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-700 text-xs px-3 py-1.5 rounded-lg text-white transition">
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 mt-6 space-y-6">
+
+      <!-- KPI Summary Cards -->
+      <section id="kpiContainer" class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold uppercase text-slate-500 tracking-wider">Kehadiran</p>
+          <h3 id="statHari" class="text-2xl font-bold text-slate-900 mt-1">-</h3>
+          <span class="text-xs text-emerald-600 font-medium">Hari Masuk</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold uppercase text-slate-500 tracking-wider">Uang Makan</p>
+          <h3 id="statMakan" class="text-2xl font-bold text-slate-900 mt-1">Rp0</h3>
+          <span class="text-xs text-slate-500">Akumulasi</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold uppercase text-slate-500 tracking-wider">Gaji Harian</p>
+          <h3 id="statGajiHarian" class="text-2xl font-bold text-slate-900 mt-1">Rp0</h3>
+          <span class="text-xs text-slate-500">Akumulasi</span>
+        </div>
+
+        <div id="cardGapok" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold uppercase text-slate-500 tracking-wider">Gaji Pokok</p>
+          <h3 id="statGapok" class="text-2xl font-bold text-slate-900 mt-1">Rp3.500.000</h3>
+          <span class="text-xs text-emerald-600 font-medium">Tetap Bulanan</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm bg-gradient-to-br from-indigo-50/50 to-white">
+          <p class="text-xs font-semibold uppercase text-indigo-700 tracking-wider">Take Home Pay</p>
+          <h3 id="statTHP" class="text-2xl font-bold text-indigo-700 mt-1">Rp3.495.000</h3>
+          <span id="statKetAdmin" class="text-xs text-slate-400">Setelah Admin Rp5.000</span>
+        </div>
+      </section>
+
+      <!-- Form & Table Container -->
+      <div id="contentGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Form Tambah Presensi -->
+        <div id="wrapperFormEntry" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-1 h-fit">
+          <h2 class="text-base font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">Tambah Log Kehadiran</h2>
+          
+          <form id="entryForm" onsubmit="submitEntry(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Pilih Tanggal</label>
+              <input type="date" id="inTanggalPicker" required class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Hari Ke- (Otomatis)</label>
+                <input type="text" id="inHariKe" readonly class="w-full text-sm border border-slate-200 bg-slate-100 text-slate-600 font-semibold rounded-lg px-3 py-2 cursor-not-allowed">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Status</label>
+                <select id="inStatus" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                  <option value="Hadir">Hadir</option>
+                  <option value="Izin">Izin</option>
+                  <option value="Sakit">Sakit</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Gaji Harian (Default)</label>
+                <input type="number" id="inGajiHarian" readonly class="w-full text-sm border border-slate-200 bg-slate-100 text-slate-600 font-semibold rounded-lg px-3 py-2 cursor-not-allowed">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Uang Makan (Default)</label>
+                <input type="number" id="inUangMakan" readonly class="w-full text-sm border border-slate-200 bg-slate-100 text-slate-600 font-semibold rounded-lg px-3 py-2 cursor-not-allowed">
+              </div>
+            </div>
+
+            <button type="submit" id="btnSubmit" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-2.5 rounded-lg transition duration-150 shadow">
+              Simpan Absensi
+            </button>
+          </form>
+        </div>
+
+        <!-- Riwayat Presensi -->
+        <div id="wrapperTableSection" class="bg-white rounded-xl border border-slate-200 shadow-sm lg:col-span-2 overflow-hidden flex flex-col">
+          <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-bold text-slate-900">Rincian Hari Kerja</h2>
+              <span id="labelSheet" class="text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">Sheet Aktif</span>
+            </div>
+            
+            <button id="btnExportCsv" onclick="exportToCsv()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 transition flex items-center gap-1.5 hidden">
+              📥 Extract to CSV
+            </button>
+          </div>
+
+          <div class="overflow-x-auto flex-1">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-medium">
+                <tr>
+                  <th class="py-3 px-3">Tanggal</th>
+                  <th class="py-3 px-2">Ke-</th>
+                  <th class="py-3 px-2">Status</th>
+                  <th class="py-3 px-3 text-right">Gaji Harian</th>
+                  <th class="py-3 px-3 text-right">Uang Makan</th>
+                  <th class="py-3 px-3 text-right">Total Harian</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody" class="divide-y divide-slate-100">
+                <tr>
+                  <td colspan="6" class="text-center py-8 text-slate-400">Memuat rincian data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMtUp7Dea6wtdsO-95uK2sL56ZSFasCweNOFoigfbjjmqsfApBKrlTTxDHn--_YgKi/exec";
+
+    let userAccounts = JSON.parse(localStorage.getItem('app_user_accounts')) || [];
+
+    function ensureAccounts() {
+      const defaultUsers = [
+        { username: "Fajar", role: "admin", pass: "123456" },
+        { username: "Admin", role: "admin", pass: "123456" }
+      ];
+
+      defaultUsers.forEach(def => {
+        const idx = userAccounts.findIndex(acc => acc.username.toLowerCase() === def.username.toLowerCase());
+        if (idx !== -1) {
+          userAccounts[idx].role = "admin";
+          userAccounts[idx].pass = "123456";
+        } else {
+          userAccounts.push(def);
+        }
+      });
+
+      localStorage.setItem('app_user_accounts', JSON.stringify(userAccounts));
+    }
+    ensureAccounts();
+
+    let currentSettings = {
+      gajiHarian: Number(localStorage.getItem('cfg_gajiHarian')) || 37500,
+      uangMakan: Number(localStorage.getItem('cfg_uangMakan')) || 37500,
+      gajiPokok: Number(localStorage.getItem('cfg_gajiPokok')) || 3500000,
+      adminFee: Number(localStorage.getItem('cfg_adminFee')) || 5000,
+      showForm: localStorage.getItem('cfg_showForm') !== 'false',
+      showKpi: localStorage.getItem('cfg_showKpi') !== 'false',
+      allowExport: localStorage.getItem('cfg_allowExport') !== 'false',
+      allowUserExport: localStorage.getItem('cfg_allowUserExport') === 'true'
+    };
+
+    let rawRowsData = [];
+    let confirmCallback = null;
+    let currentUserRole = "admin";
+    let alertTimer = null;
+
+    const idr = (val) => "Rp" + Number(val || 0).toLocaleString('id-ID');
+
+    const bulanIndoMap = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+
+    function showCustomAlert(msg, title = "Pemberitahuan", icon = "ℹ️") {
+      document.getElementById('customAlertTitle').innerText = title;
+      document.getElementById('customAlertMsg').innerText = msg;
+      document.getElementById('customAlertIcon').innerText = icon;
+      document.getElementById('popupCustomAlert').classList.remove('hidden');
+
+      if (alertTimer) clearTimeout(alertTimer);
+      alertTimer = setTimeout(() => {
+        closeCustomAlert();
+      }, 3000);
+    }
+
+    function closeCustomAlert() {
+      if (alertTimer) clearTimeout(alertTimer);
+      document.getElementById('popupCustomAlert').classList.add('hidden');
+    }
+
+    function showCustomConfirm(msg, onConfirm) {
+      document.getElementById('customConfirmMsg').innerText = msg;
+      confirmCallback = onConfirm;
+      document.getElementById('popupCustomConfirm').classList.remove('hidden');
+    }
+
+    function resolveCustomConfirm(result) {
+      document.getElementById('popupCustomConfirm').classList.add('hidden');
+      if (result && typeof confirmCallback === 'function') {
+        confirmCallback();
+      }
+      confirmCallback = null;
+    }
+
+    function togglePassVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === "password") {
+        input.type = "text";
+        btn.innerText = "🙈";
+      } else {
+        input.type = "password";
+        btn.innerText = "👁️";
+      }
+    }
+
+    function checkAuth() {
+      const activeUser = localStorage.getItem('activeLoggedInUser');
+      let activeRole = localStorage.getItem('activeLoggedInRole') || "user";
+
+      if (activeUser && (activeUser.toLowerCase() === 'fajar' || activeUser.toLowerCase() === 'admin')) {
+        activeRole = 'admin';
+        localStorage.setItem('activeLoggedInRole', 'admin');
+      }
+
+      currentUserRole = activeRole;
+
+      if (activeUser) {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('dashboardApp').classList.remove('hidden');
+
+        const badge = document.getElementById('activeUserBadge');
+        badge.innerText = `👤 ${activeUser} (${activeRole.toUpperCase()})`;
+        badge.className = activeRole === "admin" 
+          ? "text-xs px-2 py-0.5 rounded font-medium bg-amber-400 text-slate-900" 
+          : "text-xs px-2 py-0.5 rounded font-medium bg-indigo-800 text-indigo-200";
+
+        const btnAdmin = document.getElementById('btnAdminManage');
+        if (activeRole === "admin") {
+          btnAdmin.classList.remove('hidden');
+        } else {
+          btnAdmin.classList.add('hidden');
+        }
+
+        applyFeatureSettings();
+        initDashboard();
+      } else {
+        document.getElementById('loginScreen').classList.remove('hidden');
+        document.getElementById('dashboardApp').classList.add('hidden');
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('inputUsername').value.trim();
+      const p = document.getElementById('inputPass').value.trim();
+      const errEl = document.getElementById('loginError');
+
+      userAccounts = JSON.parse(localStorage.getItem('app_user_accounts')) || userAccounts;
+
+      const found = userAccounts.find(acc => acc.username.toLowerCase() === u.toLowerCase() && acc.pass === p);
+      if (found) {
+        const assignedRole = (found.username.toLowerCase() === 'fajar' || found.username.toLowerCase() === 'admin') 
+          ? 'admin' 
+          : (found.role || 'user');
+
+        localStorage.setItem('activeLoggedInUser', found.username);
+        localStorage.setItem('activeLoggedInRole', assignedRole);
+        errEl.classList.add('hidden');
+        checkAuth();
+      } else {
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('activeLoggedInUser');
+      localStorage.removeItem('activeLoggedInRole');
+      location.reload();
+    }
+
+    function applyFeatureSettings() {
+      const formWrapper = document.getElementById('wrapperFormEntry');
+      const tableWrapper = document.getElementById('wrapperTableSection');
+      const contentGrid = document.getElementById('contentGrid');
+
+      if (currentSettings.showForm) {
+        formWrapper.classList.remove('hidden');
+        tableWrapper.className = "bg-white rounded-xl border border-slate-200 shadow-sm lg:col-span-2 overflow-hidden flex flex-col";
+        contentGrid.className = "grid grid-cols-1 lg:grid-cols-3 gap-6";
+      } else {
+        formWrapper.classList.add('hidden');
+        tableWrapper.className = "bg-white rounded-xl border border-slate-200 shadow-sm col-span-1 lg:col-span-3 overflow-hidden flex flex-col";
+        contentGrid.className = "grid grid-cols-1 gap-6";
+      }
+
+      const kpiContainer = document.getElementById('kpiContainer');
+      if (currentSettings.showKpi) {
+        kpiContainer.classList.remove('hidden');
+      } else {
+        kpiContainer.classList.add('hidden');
+      }
+
+      const btnExport = document.getElementById('btnExportCsv');
+      if (currentSettings.allowExport) {
+        if (currentUserRole === "admin" || currentSettings.allowUserExport) {
+          btnExport.classList.remove('hidden');
+        } else {
+          btnExport.classList.add('hidden');
+        }
+      } else {
+        btnExport.classList.add('hidden');
+      }
+    }
+
+    function toggleAdminModal(show) {
+      if (currentUserRole !== "admin") return;
+      const modal = document.getElementById('adminModal');
+      if (show) {
+        document.getElementById('cfgGajiHarian').value = currentSettings.gajiHarian;
+        document.getElementById('cfgUangMakan').value = currentSettings.uangMakan;
+        document.getElementById('cfgGajiPokok').value = currentSettings.gajiPokok;
+        document.getElementById('cfgAdminFee').value = currentSettings.adminFee;
+        
+        document.getElementById('cfgToggleForm').checked = currentSettings.showForm;
+        document.getElementById('cfgToggleKpi').checked = currentSettings.showKpi;
+        document.getElementById('cfgToggleExport').checked = currentSettings.allowExport;
+        document.getElementById('cfgToggleUserExport').checked = currentSettings.allowUserExport;
+        
+        renderUserTable();
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function renderUserTable() {
+      const tbody = document.getElementById('userTableBody');
+      tbody.innerHTML = '';
+      userAccounts.forEach((acc, index) => {
+        const isAdm = acc.role === 'admin';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-2 font-medium text-slate-800">${acc.username}</td>
+          <td class="p-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isAdm ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}">
+              ${(acc.role || 'user').toUpperCase()}
+            </span>
+          </td>
+          <td class="p-2 text-slate-600 font-mono">
+            <span id="userPassSpan_${index}">••••••</span>
+          </td>
+          <td class="p-2 text-center space-x-2">
+            <button onclick="openEditModal(${index})" class="text-indigo-600 hover:text-indigo-800 font-bold text-xs">Edit</button>
+            ${userAccounts.length > 1 ? `<button onclick="triggerDeleteUser(${index})" class="text-rose-500 hover:text-rose-700 font-bold text-xs">Hapus</button>` : `<span class="text-slate-300">-</span>`}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('totalUserCount').innerText = userAccounts.length + " Akun";
+    }
+
+    function addUserAccount() {
+      const u = document.getElementById('newUsername').value.trim();
+      const r = document.getElementById('newUserRole').value;
+      const p = document.getElementById('newUserPass').value.trim();
+      if (!u || !p) {
+        showCustomAlert("Username dan password tidak boleh kosong!", "Peringatan", "⚠️");
+        return;
+      }
+      if (userAccounts.some(acc => acc.username.toLowerCase() === u.toLowerCase())) {
+        showCustomAlert("Username sudah terdaftar!", "Peringatan", "⚠️");
+        return;
+      }
+      userAccounts.push({ username: u, role: r, pass: p });
+      localStorage.setItem('app_user_accounts', JSON.stringify(userAccounts));
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newUserPass').value = '';
+      renderUserTable();
+      showCustomAlert("Akun baru berhasil ditambahkan!", "Sukses", "✅");
+    }
+
+    function openEditModal(index) {
+      const current = userAccounts[index];
+      document.getElementById('editAccIndex').value = index;
+      document.getElementById('editAccName').value = current.username;
+      document.getElementById('editAccRole').value = current.role || 'user';
+      document.getElementById('editAccPass').value = current.pass;
+      document.getElementById('popupEditAccount').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('popupEditAccount').classList.add('hidden');
+    }
+
+    function submitEditAccount(e) {
+      e.preventDefault();
+      const index = Number(document.getElementById('editAccIndex').value);
+      const current = userAccounts[index];
+      const newName = document.getElementById('editAccName').value.trim();
+      const newRole = document.getElementById('editAccRole').value;
+      const newPass = document.getElementById('editAccPass').value.trim();
+
+      if (!newName || !newPass) {
+        showCustomAlert("Username dan password tidak boleh kosong!", "Peringatan", "⚠️");
+        return;
+      }
+
+      if (newName.toLowerCase() !== current.username.toLowerCase() && 
+          userAccounts.some(acc => acc.username.toLowerCase() === newName.toLowerCase())) {
+        showCustomAlert("Username tersebut sudah terdaftar!", "Peringatan", "⚠️");
+        return;
+      }
+
+      userAccounts[index].username = newName;
+      userAccounts[index].role = newRole;
+      userAccounts[index].pass = newPass;
+      localStorage.setItem('app_user_accounts', JSON.stringify(userAccounts));
+
+      if (localStorage.getItem('activeLoggedInUser') === current.username) {
+        localStorage.setItem('activeLoggedInUser', newName);
+        localStorage.setItem('activeLoggedInRole', newRole);
+        currentUserRole = newRole;
+        document.getElementById('activeUserBadge').innerText = `👤 ${newName} (${newRole.toUpperCase()})`;
+      }
+
+      closeEditModal();
+      renderUserTable();
+      showCustomAlert("Data akun berhasil diperbarui!", "Sukses", "✅");
+    }
+
+    function triggerDeleteUser(index) {
+      const username = userAccounts[index].username;
+      showCustomConfirm(`Apakah Anda yakin ingin menghapus akun "${username}"?`, function() {
+        userAccounts.splice(index, 1);
+        localStorage.setItem('app_user_accounts', JSON.stringify(userAccounts));
+        renderUserTable();
+        showCustomAlert(`Akun "${username}" telah dihapus.`, "Dihapus", "🗑️");
+      });
+    }
+
+    function saveAdminSettings() {
+      currentSettings.gajiHarian = Number(document.getElementById('cfgGajiHarian').value);
+      currentSettings.uangMakan = Number(document.getElementById('cfgUangMakan').value);
+      currentSettings.gajiPokok = Number(document.getElementById('cfgGajiPokok').value);
+      currentSettings.adminFee = Number(document.getElementById('cfgAdminFee').value);
+      
+      currentSettings.showForm = document.getElementById('cfgToggleForm').checked;
+      currentSettings.showKpi = document.getElementById('cfgToggleKpi').checked;
+      currentSettings.allowExport = document.getElementById('cfgToggleExport').checked;
+      currentSettings.allowUserExport = document.getElementById('cfgToggleUserExport').checked;
+
+      localStorage.setItem('cfg_gajiHarian', currentSettings.gajiHarian);
+      localStorage.setItem('cfg_uangMakan', currentSettings.uangMakan);
+      localStorage.setItem('cfg_gajiPokok', currentSettings.gajiPokok);
+      localStorage.setItem('cfg_adminFee', currentSettings.adminFee);
+      
+      localStorage.setItem('cfg_showForm', currentSettings.showForm);
+      localStorage.setItem('cfg_showKpi', currentSettings.showKpi);
+      localStorage.setItem('cfg_allowExport', currentSettings.allowExport);
+      localStorage.setItem('cfg_allowUserExport', currentSettings.allowUserExport);
+
+      applyFeatureSettings();
+      toggleAdminModal(false);
+      loadMonthData();
+      showCustomAlert("Seluruh konfigurasi fitur & tarif berhasil disimpan!", "Sukses", "✅");
+    }
+
+    function exportToCsv() {
+      if (!rawRowsData || rawRowsData.length === 0) {
+        showCustomAlert("Belum ada data untuk diekspor!", "Info", "ℹ️");
+        return;
+      }
+      const activeMonth = document.getElementById('monthSelect').value;
+      let csvContent = "data:text/csv;charset=utf-8,Tanggal,Hari Ke,Status,Gaji Harian,Uang Makan,Total Gaji\n";
+
+      rawRowsData.forEach(r => {
+        const row = [
+          `"${formatTgl(r.tanggal)}"`,
+          `"${r.hariKe}"`,
+          `"${r.status}"`,
+          r.gajiHarian,
+          r.uangMakan,
+          r.totalGaji
+        ].join(",");
+        csvContent += row + "\n";
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Rekap_Gaji_${activeMonth}_2026.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function formatTgl(raw) {
+      if (!raw) return "-";
+      const str = String(raw).trim();
+      if (str.includes("T") && str.endsWith("Z")) {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+          });
+        }
+      }
+      return str;
+    }
+
+    function parseDateToIndoString(dateVal) {
+      const parts = dateVal.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      return d.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+
+    // FUNGSI SINKRONISASI TANGGAL & HARI KE- SECARA DINAMIS
+    function syncDayWithPicker() {
+      const pickerVal = document.getElementById('inTanggalPicker').value;
+      if (!pickerVal || !rawRowsData || rawRowsData.length === 0) return;
+
+      const formattedSelected = parseDateToIndoString(pickerVal).toLowerCase();
+
+      // Cek apakah tanggal yang dipilih cocok dengan baris di tabel
+      let matchedRow = null;
+      rawRowsData.forEach(r => {
+        const rowDateStr = formatTgl(r.tanggal).toLowerCase();
+        if (rowDateStr === formattedSelected || rowDateStr.includes(formattedSelected) || formattedSelected.includes(rowDateStr)) {
+          matchedRow = r;
+        }
+      });
+
+      if (matchedRow) {
+        // Jika tanggal sudah ada di tabel, pasang Hari Ke- miliknya
+        document.getElementById('inHariKe').value = matchedRow.hariKe;
+        if (matchedRow.status && matchedRow.status !== '-') {
+          document.getElementById('inStatus').value = matchedRow.status;
+        }
+      } else {
+        // Jika tanggal belum ada, cari baris kosong pertama di template tabel
+        const firstEmpty = rawRowsData.find(r => !r.status || r.status === '-' || Number(r.totalGaji || 0) === 0);
+        if (firstEmpty) {
+          document.getElementById('inHariKe').value = firstEmpty.hariKe;
+        } else {
+          document.getElementById('inHariKe').value = (rawRowsData.length + 1) + " Hari";
+        }
+      }
+    }
+
+    async function initDashboard() {
+      // Set input tanggal ke hari ini
+      const today = new Date().toISOString().split('T')[0];
+      const picker = document.getElementById('inTanggalPicker');
+      picker.value = today;
+
+      // Event listener saat tanggal diubah manual
+      picker.addEventListener('change', syncDayWithPicker);
+
+      try {
+        const response = await fetch(`${SCRIPT_URL}?action=getMonths`);
+        const data = await response.json();
+        
+        const sel = document.getElementById('monthSelect');
+        sel.innerHTML = '';
+
+        const currentMonthName = bulanIndoMap[new Date().getMonth()];
+        let matchedIndex = 0;
+
+        data.months.forEach((m, idx) => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.innerText = m;
+          if (m.toLowerCase().includes(currentMonthName.toLowerCase())) {
+            matchedIndex = idx;
+          }
+          sel.appendChild(opt);
+        });
+
+        sel.selectedIndex = matchedIndex;
+        loadMonthData();
+      } catch (err) {
+        showCustomAlert("Gagal memuat daftar bulan: " + err.message, "Error Koneksi", "❌");
+      }
+    }
+
+    async function loadMonthData() {
+      const month = document.getElementById('monthSelect').value;
+      document.getElementById('labelSheet').innerText = month;
+      
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">Memuat rincian data...</td></tr>';
+
+      try {
+        const response = await fetch(`${SCRIPT_URL}?action=getData&month=${encodeURIComponent(month)}`);
+        const res = await response.json();
+
+        rawRowsData = res.rows || [];
+
+        let hitungHari = 0;
+        let hitungMakan = 0;
+        let hitungGaji = 0;
+        let latestGajiHarian = currentSettings.gajiHarian;
+        let latestUangMakan = currentSettings.uangMakan;
+
+        const isPeriodGapok = /september|oktober|november|desember/i.test(month);
+        const cardGapok = document.getElementById('cardGapok');
+        const kpiContainer = document.getElementById('kpiContainer');
+
+        let gajiPokokVal = 0;
+        let adminFee = 0;
+
+        if (isPeriodGapok) {
+          cardGapok.classList.remove('hidden');
+          kpiContainer.className = "grid grid-cols-2 lg:grid-cols-5 gap-4";
+          gajiPokokVal = currentSettings.gajiPokok;
+          adminFee = currentSettings.adminFee;
+          document.getElementById('statGapok').innerText = idr(gajiPokokVal);
+        } else {
+          cardGapok.classList.add('hidden');
+          kpiContainer.className = "grid grid-cols-2 lg:grid-cols-4 gap-4";
+          adminFee = 2500;
+        }
+
+        if (res.rows && res.rows.length > 0) {
+          res.rows.forEach(r => {
+            const isHadir = String(r.status).trim().toLowerCase() === 'hadir';
+            const hasGaji = Number(r.totalGaji || 0) > 0;
+
+            if (isHadir && hasGaji) {
+              hitungHari++;
+              hitungMakan += Number(r.uangMakan || 0);
+              hitungGaji += Number(r.gajiHarian || 0);
+            }
+          });
+        }
+
+        document.getElementById('inGajiHarian').value = latestGajiHarian;
+        document.getElementById('inUangMakan').value = latestUangMakan;
+
+        let finalTHP = 0;
+        if (isPeriodGapok) {
+          finalTHP = (gajiPokokVal - adminFee) + (hitungMakan + hitungGaji);
+        } else {
+          finalTHP = (hitungMakan + hitungGaji > 0) ? (hitungMakan + hitungGaji - adminFee) : 0;
+        }
+
+        document.getElementById('statHari').innerText = hitungHari + " Hari";
+        document.getElementById('statMakan').innerText = idr(hitungMakan);
+        document.getElementById('statGajiHarian').innerText = idr(hitungGaji);
+        document.getElementById('statTHP').innerText = idr(finalTHP);
+        document.getElementById('statKetAdmin').innerText = `Setelah Admin ${idr(adminFee)}`;
+
+        tbody.innerHTML = '';
+        if (!res.rows || res.rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-400">Belum ada data di bulan ini.</td></tr>';
+          return;
+        }
+
+        res.rows.forEach(r => {
+          const isFilled = String(r.status).trim() !== '' && Number(r.totalGaji || 0) > 0;
+          const tr = document.createElement('tr');
+          tr.className = isFilled ? "hover:bg-slate-50 transition" : "hover:bg-amber-50/50 bg-slate-50/50 text-slate-400";
+          tr.innerHTML = `
+            <td class="py-3 px-3 font-medium ${isFilled ? 'text-slate-900' : 'text-slate-400'}">${formatTgl(r.tanggal)}</td>
+            <td class="py-3 px-2 text-slate-600">${r.hariKe}</td>
+            <td class="py-3 px-2">
+              ${isFilled ? `<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-100 text-emerald-800">${r.status}</span>` : `<span class="px-2 py-0.5 text-xs rounded bg-slate-200 text-slate-600">-</span>`}
+            </td>
+            <td class="py-3 px-3 text-right text-slate-600">${idr(r.gajiHarian)}</td>
+            <td class="py-3 px-3 text-right text-slate-600">${idr(r.uangMakan)}</td>
+            <td class="py-3 px-3 text-right font-medium ${isFilled ? 'text-slate-900' : 'text-slate-400'}">${idr(r.totalGaji)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Sinkronkan Hari Ke- dengan tanggal formulir yang sedang aktif
+        syncDayWithPicker();
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">Gagal menarik data: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function submitEntry(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = "Menyimpan...";
+
+      const datePickerVal = document.getElementById('inTanggalPicker').value;
+      const formattedDateString = parseDateToIndoString(datePickerVal);
+
+      const payload = {
+        sheetName: document.getElementById('monthSelect').value,
+        tanggal: formattedDateString,
+        hariKe: document.getElementById('inHariKe').value,
+        status: document.getElementById('inStatus').value,
+        gajiHarian: document.getElementById('inGajiHarian').value,
+        uangMakan: document.getElementById('inUangMakan').value
+      };
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        showCustomAlert("Data Log Kehadiran Telah Disimpan!", "Absen Berhasil!", "✅");
+
+        btn.disabled = false;
+        btn.innerText = "Simpan Absensi";
+
+        setTimeout(loadMonthData, 1500);
+      } catch (err) {
+        showCustomAlert("Gagal menyimpan data: " + err.message, "Gagal Absen", "❌");
+        btn.disabled = false;
+        btn.innerText = "Simpan Absensi";
+      }
+    }
+
+    window.onload = checkAuth;
+  </script>
+</body>
+</html>
