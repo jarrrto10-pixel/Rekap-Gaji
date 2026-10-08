@@ -63,7 +63,7 @@
   <!-- ================= POPUP KONFIRMASI KUSTOM ================= -->
   <div id="popupCustomConfirm" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center space-y-4 border border-slate-100">
-      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-2 text-2xl">
         ⚠️
       </div>
       <div>
@@ -171,7 +171,6 @@
                 </tr>
               </thead>
               <tbody id="userTableBody" class="divide-y divide-slate-100">
-                <!-- Diisi dinamis -->
               </tbody>
             </table>
           </div>
@@ -779,14 +778,27 @@
       });
     }
 
-    // FUNGSI SINKRONISASI TANGGAL & HARI KE- SECARA DINAMIS
+    // Mengubah Gaji Harian & Uang Makan sesuai pilihan Status
+    function handleStatusChange() {
+      const statusVal = document.getElementById('inStatus').value;
+      const inGaji = document.getElementById('inGajiHarian');
+      const inMakan = document.getElementById('inUangMakan');
+
+      if (statusVal === 'Hadir') {
+        inGaji.value = currentSettings.gajiHarian;
+        inMakan.value = currentSettings.uangMakan;
+      } else {
+        inGaji.value = 0;
+        inMakan.value = 0;
+      }
+    }
+
     function syncDayWithPicker() {
       const pickerVal = document.getElementById('inTanggalPicker').value;
       if (!pickerVal || !rawRowsData || rawRowsData.length === 0) return;
 
       const formattedSelected = parseDateToIndoString(pickerVal).toLowerCase();
 
-      // Cek apakah tanggal yang dipilih cocok dengan baris di tabel
       let matchedRow = null;
       rawRowsData.forEach(r => {
         const rowDateStr = formatTgl(r.tanggal).toLowerCase();
@@ -796,13 +808,11 @@
       });
 
       if (matchedRow) {
-        // Jika tanggal sudah ada di tabel, pasang Hari Ke- miliknya
         document.getElementById('inHariKe').value = matchedRow.hariKe;
         if (matchedRow.status && matchedRow.status !== '-') {
           document.getElementById('inStatus').value = matchedRow.status;
         }
       } else {
-        // Jika tanggal belum ada, cari baris kosong pertama di template tabel
         const firstEmpty = rawRowsData.find(r => !r.status || r.status === '-' || Number(r.totalGaji || 0) === 0);
         if (firstEmpty) {
           document.getElementById('inHariKe').value = firstEmpty.hariKe;
@@ -810,16 +820,17 @@
           document.getElementById('inHariKe').value = (rawRowsData.length + 1) + " Hari";
         }
       }
+
+      handleStatusChange();
     }
 
     async function initDashboard() {
-      // Set input tanggal ke hari ini
       const today = new Date().toISOString().split('T')[0];
       const picker = document.getElementById('inTanggalPicker');
       picker.value = today;
 
-      // Event listener saat tanggal diubah manual
       picker.addEventListener('change', syncDayWithPicker);
+      document.getElementById('inStatus').addEventListener('change', handleStatusChange);
 
       try {
         const response = await fetch(`${SCRIPT_URL}?action=getMonths`);
@@ -864,8 +875,6 @@
         let hitungHari = 0;
         let hitungMakan = 0;
         let hitungGaji = 0;
-        let latestGajiHarian = currentSettings.gajiHarian;
-        let latestUangMakan = currentSettings.uangMakan;
 
         const isPeriodGapok = /september|oktober|november|desember/i.test(month);
         const cardGapok = document.getElementById('cardGapok');
@@ -899,8 +908,7 @@
           });
         }
 
-        document.getElementById('inGajiHarian').value = latestGajiHarian;
-        document.getElementById('inUangMakan').value = latestUangMakan;
+        handleStatusChange();
 
         let finalTHP = 0;
         if (isPeriodGapok) {
@@ -922,14 +930,19 @@
         }
 
         res.rows.forEach(r => {
-          const isFilled = String(r.status).trim() !== '' && Number(r.totalGaji || 0) > 0;
+          const isFilled = String(r.status).trim() !== '' && (Number(r.totalGaji || 0) > 0 || r.status.toLowerCase() === 'izin' || r.status.toLowerCase() === 'sakit');
           const tr = document.createElement('tr');
           tr.className = isFilled ? "hover:bg-slate-50 transition" : "hover:bg-amber-50/50 bg-slate-50/50 text-slate-400";
+          
+          let badgeColor = "bg-emerald-100 text-emerald-800";
+          if (String(r.status).toLowerCase() === 'izin') badgeColor = "bg-amber-100 text-amber-800";
+          if (String(r.status).toLowerCase() === 'sakit') badgeColor = "bg-rose-100 text-rose-800";
+
           tr.innerHTML = `
             <td class="py-3 px-3 font-medium ${isFilled ? 'text-slate-900' : 'text-slate-400'}">${formatTgl(r.tanggal)}</td>
             <td class="py-3 px-2 text-slate-600">${r.hariKe}</td>
             <td class="py-3 px-2">
-              ${isFilled ? `<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-100 text-emerald-800">${r.status}</span>` : `<span class="px-2 py-0.5 text-xs rounded bg-slate-200 text-slate-600">-</span>`}
+              ${isFilled ? `<span class="px-2 py-0.5 text-xs font-semibold rounded ${badgeColor}">${r.status}</span>` : `<span class="px-2 py-0.5 text-xs rounded bg-slate-200 text-slate-600">-</span>`}
             </td>
             <td class="py-3 px-3 text-right text-slate-600">${idr(r.gajiHarian)}</td>
             <td class="py-3 px-3 text-right text-slate-600">${idr(r.uangMakan)}</td>
@@ -938,7 +951,6 @@
           tbody.appendChild(tr);
         });
 
-        // Sinkronkan Hari Ke- dengan tanggal formulir yang sedang aktif
         syncDayWithPicker();
 
       } catch (err) {
